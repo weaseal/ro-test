@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  WebNode:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t2.nano
+      ImageId: ami-af455dc9
+      KeyName: walt-ubuntu
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          apt update
+          apt install -y rails
+          cd ~ubuntu
+          sudo -u ubuntu rails new -f rails-demo
+          cd rails-demo
+          sudo -u ubuntu rails server -d -b 0.0.0.0
+      NetworkInterfaces:
+      - AssociatePublicIpAddress: true
+        GroupSet:
+          - Ref: WebSecurityGroup
+        SubnetId:
+          Ref: PublicSubnet
+        DeviceIndex: 0
+  WebVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.1.2.0/24
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref WebVPC
+      CidrBlock: 10.1.2.0/24
+  WebSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref WebVPC
+      GroupDescription: "Allows 3000 in"
+      SecurityGroupIngress:
+        IpProtocol: tcp
+        FromPort: 3000
+        ToPort: 3000
+        CidrIp: 0.0.0.0/0
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: {}
+  InternetGatewayVpcAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref WebVPC
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref WebVPC
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: 0.0.0.0/0
+  SubnetRoute:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+Outputs:
+  Destination:
+    Description: Use this address in your browser
+    Value: !GetAtt WebNode.PublicIp

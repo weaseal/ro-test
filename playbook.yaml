@@ -1,0 +1,22 @@
+- name: Launch stack
+  connection: local
+  hosts: localhost
+  tasks:
+  - name: Deploy Cloudformation stack
+    cloudformation:
+      region: "eu-west-1"
+      stack_name: "walt-ro-test"
+      state: present
+      template: cloudformation.yaml
+    register: cloudformation
+
+  - name: Wait for Rails to come up
+    wait_for:
+      host: "{{ cloudformation.stack_outputs.Destination }}"
+      port: 3000
+      timeout: 1000
+      state: started
+
+  - name: Print destination
+    debug:
+      msg: "Please visit http://{{ cloudformation.stack_outputs.Destination }}:3000 in your browser"
