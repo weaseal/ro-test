@@ -1,3 +1,5 @@
+Warning: Creates AWS resources when executed.
+
 # ro-test
 Run this: ansible-playbook playbook.yaml
 
